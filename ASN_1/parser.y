@@ -107,7 +107,7 @@ term :    PRECOMPILER   {printToken(yyval.tinfo, "PRECOMPILER");}
         | NUMCONST      {printToken(yyval.tinfo, "NUMCONST");}
         | STRINGCONST   {printToken(yyval.tinfo, "STRINGCONST");}
         | CHARCONST     {printToken(yyval.tinfo, "CHARCONST");}
-        | ERROR         {cout << "ERROR(" << yyval.tinfo.linenum << "):" << " Invalid or misplaced input character: " << "'" << yyval.tinfo.tokenstr << "'. Character Ignored." <<endl;}
+        | ERROR         {cout << "ERROR(" << yyval.tinfo.linenum << "):" << " Token error, invalid or misplaced input character: " << "'" << yyval.tinfo.tokenstr << "'. Character Ignored." <<endl;}
 %%
 void yyerror (const char *msg)
 { 
