@@ -1,1 +1,97 @@
-#DRBC Test case
+#DRBC All production rules Full test
+// /\ precomList
+// \/ program
+
+// <CONSTANT> ::= NUMCONST | CHARCONST | STRINGCONST | BOOLCONST
+int x:5, y:1337;
+char booger[15]:"picking";
+string = "loose";
+bool DOG = TRUE;
+
+// <parmId> | <parmLisT> | <parms> | <parmIdList> | <funDecl>
+int bar(int b, a[]; bool c, d; int e; char f)
+{
+  // <assignop>
+  a = 1;
+  a += 1;
+  a -= 1;
+  a *= 1;
+  a /= 1;
+
+  // <simpleExp>
+  x = y;
+
+  // <andExp>
+  x = x and y;
+
+  // <unaryRelExp>
+  x = not x;
+
+  // <relExp> | <relop>
+  x = y == y;
+  x = y != y;
+  x = y <= y;
+  x = y < y;
+  x = y >= y;
+  x = y > y;
+  x = y < y;
+
+  // <minmaxExp>
+  x = x :>: x;
+  x = x :<: x;
+
+  // <expstmt>
+  a;
+
+  // <compoundstmt>
+  {a++; b[1]--}
+
+  // <call>
+  main();
+
+  // <call> | <arglist>
+  foo(1, b, true, false, 123, 'f');
+
+  // <unaryexp> | <unaryop>
+  *b;
+  ?a;
+  -a;
+
+  // <mulExp> | <mulop>
+  a*a;
+  a/a;
+  a%a;
+
+  // <sumop> | <sumexp>
+  a+a;
+  a-a;
+
+  // <matched> | <unmatched>
+  while true do
+  {
+    // <scopedVarDeclList>
+    static int variable;
+    if 1 < 2 then
+    {
+      break;
+    }
+    else
+    {
+      break;
+    }
+  }
+  
+  // <iterrange>
+  for i = 1 to 10 by 3 do 
+  {
+
+  }
+  
+  // <returnstmt>
+  return 3;
+
+}
+
+main()
+{
+}
