@@ -3,10 +3,14 @@
 // \/ program
 
 // <CONSTANT> ::= NUMCONST | CHARCONST | STRINGCONST | BOOLCONST
-int x:5, y:1337;
+// int x:5, y:1337;
 char booger[15]:"picking";
-string = "loose";
-bool DOG = TRUE;
+// string = "loose";
+// ool DOG = TRUE;
+
+main()
+{
+}
 
 // <parmId> | <parmLisT> | <parms> | <parmIdList> | <funDecl>
 int bar(int b, a[]; bool c, d; int e; char f)
@@ -92,6 +96,3 @@ int bar(int b, a[]; bool c, d; int e; char f)
 
 }
 
-main()
-{
-}
