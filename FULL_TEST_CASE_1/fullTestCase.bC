@@ -5,70 +5,68 @@
 // <CONSTANT> ::= NUMCONST | CHARCONST | STRINGCONST | BOOLCONST
 // int x:5, y:1337;
 char booger[15]:"picking";
-// string = "loose";
-// ool DOG = TRUE;
 
 main()
 {
 }
 
 // <parmId> | <parmLisT> | <parms> | <parmIdList> | <funDecl>
-int bar(int b, a[]; bool c, d; int e; char f)
+int bar(int x, b[]; bool y, d; int e; char f)
 {
   // <assignop>
-  a = 1;
-  a += 1;
-  a -= 1;
-  a *= 1;
-  a /= 1;
+  x = 1;
+  x += 1;
+  x -= 1;
+  x *= 1;
+  x /= 1;
 
   // <simpleExp>
-  x = y;
+  y = y or y;
 
   // <andExp>
-  x = x and y;
+  y = y and y;
 
   // <unaryRelExp>
-  x = not x;
+  y = not y;
 
   // <relExp> | <relop>
-  x = y == y;
-  x = y != y;
-  x = y <= y;
-  x = y < y;
-  x = y >= y;
-  x = y > y;
-  x = y < y;
+  y = x == x;
+  y = x != x;
+  y = x <= x;
+  y = x < x;
+  y = x >= x;
+  y = x > x;
+  y = x < x;
 
   // <minmaxExp>
   x = x :>: x;
   x = x :<: x;
 
   // <expstmt>
-  a;
+  x;
 
   // <compoundstmt>
-  {a++; b[1]--}
+  {x++; b[1]--;};
 
   // <call>
   main();
 
   // <call> | <arglist>
-  foo(1, b, true, false, 123, 'f');
+  bar(1, b, true, false, 123, 'f');
 
   // <unaryexp> | <unaryop>
   *b;
-  ?a;
-  -a;
+  ?x;
+  -x;
 
   // <mulExp> | <mulop>
-  a*a;
-  a/a;
-  a%a;
+  x*x;
+  x/x;
+  x%x;
 
   // <sumop> | <sumexp>
-  a+a;
-  a-a;
+  x+x;
+  x-x;
 
   // <matched> | <unmatched>
   while true do
