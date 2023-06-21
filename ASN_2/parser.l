@@ -36,6 +36,8 @@ whitespace  [\ \t]
 ^"#DRBC ".*                   { return setValue(line, PRECOMPILER, yytext); }
 ^"#DRBCRUN ".*                { return setValue(line, PRECOMPILER2, yytext); }
 
+[] { return setValue(line, yytext[0], yytext); }// put all single char operators here and the limiters
+
 "int"                         { return setValue(line, INT, yytext); }
 "bool"                        { return setValue(line, BOOL, yytext);}
 "char"                        { return setValue(line, CHAR, yytext);}

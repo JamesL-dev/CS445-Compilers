@@ -62,7 +62,9 @@ void yyerror(const char *msg);
 %type <tokenData> sumOp mulExp mulOp unaryExp unaryOp
 %token <tokenData> GT GEQ LT LEQ EQ NEQ
 %token <tokdenData> LASTOP
+// terms go here ie: numconst return break;
 
+// Remove all single character operators from these
 %token <tokenData> PRECOMPILER PRECOMPILER2
 %token <tokenData> NUMCONST BOOLCONST CHARCONST STRINGCONST ID
 %token <tokenData> INT BOOL CHAR STATIC
@@ -708,6 +710,7 @@ void yyerror (const char *msg)
 { 
    cout << "Error: " <<  msg << endl;
 }
+
 char *largerTokens[LASTTERM+1]; // used in the utils.cpp file printing routines
 // create a mapping from token class enum to a printable name in a
 // way that makes it easy to keep the mapping straight.
