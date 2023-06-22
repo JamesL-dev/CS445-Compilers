@@ -10,12 +10,15 @@ using namespace std;
 
 char *lastToken = (char*)"";
 int line = 1;
+extern int numWarnings;
+extern int numErrors;
 
 #define YY_DECL extern "C" int yylex()
 #define YYSTYPE int
 
  // need this to communicate between .l and .y files
 int setValue(int linenum, int tokenClass, char *svalue) {
+    yylval.tokenData = new TokenData;
     //cout << "setvalue:  " << linenum << ", " << tokenClass << ", " << svalue << endl;
     yylval.tokenData->tokenclass = tokenClass;
     yylval.tokenData->linenum;
@@ -38,7 +41,6 @@ int setValue(int linenum, int tokenClass, char *svalue) {
 
 %option noyywrap
 
-%%
 letter      [a-zA-Z]
 digit       [0-9]
 quote       [\']
@@ -52,6 +54,7 @@ charconst2  [\']\\?.[\']
 charconst3  [\'](\\[^\n]|[^\'\\\n]*)[\']
 comment     \/\/.*
 
+%%
 "++"                { return setValue(line, INC, yytext); }
 "--"                { return setValue(line, DEC, yytext); }
 "=="                { return setValue(line, EQ , yytext); }
@@ -72,7 +75,6 @@ comment     \/\/.*
 "then"              { return setValue(line, THEN, yytext); }
 "else"              { return setValue(line, ELSE, yytext); }
 "for"               { return setValue(line, FOR, yytext); }
-"repeat"            { return setValue(line, RPT, yytext); }
 "to"                { return setValue(line, TO , yytext); }
 "do"                { return setValue(line, DO , yytext); }
 "while"             { return setValue(line, WHILE, yytext); }
@@ -96,4 +98,5 @@ comment     \/\/.*
 {comment}               ; 
 \n                  { line++ ; }
 {whitespace}+           ;
-.                   { return setValue(line, ERROR, yytext); }
+.                   {printf("TOKEN ERROR(%d): invalid or misplaced input character: \'%c\' Character Ignored.\n", line, yytext[0]); numErrors++;}
+

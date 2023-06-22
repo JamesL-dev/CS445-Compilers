@@ -1,7 +1,7 @@
 %{
-#include <stdio>
+#include <stdio.h>
 #include <iostream>
-#include <Stdlib.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include "treeNodes.h"
 #include "treeUtils.h"
@@ -91,10 +91,10 @@ TreeNode *syntaxTree;
 
 %%
 program        :  precomList declList                             { syntaxTree = $2; }
-               |  declList                                        { syntaxTree = $1; }
                ;
 precomList     :  precomList PRECOMPILER                          { $$ = $1; }
-               |  PRECOMPILER                                     { printf("%s\n", yylval.tinfo->tokenstr); }
+               |  PRECOMPILER                                     { printf("%s\n", yylval.tokenData->tokenstr); }
+               |  /*empty*/                                       { $$ = NULL; }
                ;
 declList       :  declList decl                                   { $$ = addSibling($1, $2); }
                |  decl                                            { $$ = $1; }
@@ -151,10 +151,10 @@ matched        :  IF simpleExp THEN matched ELSE matched          { $$ = newStmt
                                                                      $$->child[0] = newDeclNode(VarK, Integer, $2);
                                                                      $$->child[0]->attr.name = $2->svalue;
                                                                      $$->child[0]->isArray = false; }
-               |  expstmt                                         { $$ = $1; }
-               |  compoundstmt                                    { $$ = $1; }
-               |  returnstmt                                      { $$ = $1; }
-               |  breakstmt                                       { $$ = $1; }
+               |  expStmt                                         { $$ = $1; }
+               |  compoundStmt                                    { $$ = $1; }
+               |  returnStmt                                      { $$ = $1; }
+               |  breakStmt                                       { $$ = $1; }
                ;
 iterRange      :  simpleExp TO simpleExp                          {$$ = newStmtNode(RangeK, $2, $1, $3); }
                |  simpleExp TO simpleExp BY simpleExp             {$$ = newStmtNode(RangeK, $2, $1, $3, $5); }
@@ -168,9 +168,9 @@ unmatched      :  IF simpleExp THEN stmt                          { $$ = newStmt
                                                                      $$->child[0]->isArray = false;
                                                                      $$->child[0]->size = 1; }
                ;
-expstmt        :  exp ';'                                         { $$ = $1; }
+expStmt        :  exp ';'                                         { $$ = $1; }
                ;
-compoundstmt   :  '{' localDecls stmtList '}'                     { $$ = newStmtNode(CompoundK, $1, $2, $3); yyerrok; }
+compoundStmt   :  '{' localDecls stmtList '}'                     { $$ = newStmtNode(CompoundK, $1, $2, $3); yyerrok; }
                ;
 localDecls     :  localDecls scopedVarDecl                        { $$ = addSibling($1, $2); }
                |  /* empty */                                     { $$ = NULL; }
@@ -178,21 +178,21 @@ localDecls     :  localDecls scopedVarDecl                        { $$ = addSibl
 stmtList       :  stmtList stmt                                   { $$ = ($2 == NULL ? $1 : addSibling($1, $2)); }
                |  /* empty */                                     { $$ = NULL; }
                ;
-returnstmt     :  RETURN ';'                                      { $$ = newStmtNode(ReturnK, $1); }
+returnStmt     :  RETURN ';'                                      { $$ = newStmtNode(ReturnK, $1); }
                |  RETURN exp ';'                                  { $$ = newStmtNode(ReturnK, $1, $2); yyerrok; }
                ;
-breakstmt      :  BREAK ';'                                       { $$ = newStmtNode(BreakK, $1); }
+breakStmt      :  BREAK ';'                                       { $$ = newStmtNode(BreakK, $1); }
                ;
-exp            :  mutable assignop exp                            { $$ = newExpNode(AssignK, NULL, $2, $1, $3); }
+exp            :  mutable assignop exp                            { $$ = newExpNode(AssignK, $2, $1, $3); }
                |  mutable INC                                     { $$ = newExpNode(AssignK, $2, $1); }
                |  mutable DEC                                     { $$ = newExpNode(AssignK, $2, $1); }
                |  simpleExp                                       { $$ = $1; }
                ;
-assignop       :  '='                                             { $$ = newExpNode(OpK, $1);  }
-               |  ADDASS                                          { $$ = newExpNode(OpK, $1);  }
-               |  SUBASS                                          { $$ = newExpNode(OpK, $1);  }
-               |  MULASS                                          { $$ = newExpNode(OpK, $1);  }
-               |  DIVASS                                          { $$ = newExpNode(OpK, $1); /*$1;*/ }
+assignop       :  '='                                             { $$ = $1;  }
+               |  ADDASS                                          { $$ = $1;  }
+               |  SUBASS                                          { $$ = $1;  }
+               |  MULASS                                          { $$ = $1;  }
+               |  DIVASS                                          { $$ = $1;}
                ;
 simpleExp      :  simpleExp OR andExp                             { $$ = newExpNode(OpK, $2, $1, $3); }
                |  andExp                                          { $$ = $1; }
@@ -207,47 +207,39 @@ unaryRelExp    :  NOT unaryRelExp                                 { $$ = newExpN
 relExp         :  minmaxExp relop minmaxExp                       { $$ = $1; }
                |  minmaxExp                                       { $$ = $1; }
                ; 
-relop          :  LEQ                                             { $$ = newExpNode(OpK, $1);
-                                                                     $$->attr.op = LEQ; }
-               |  '<'                                             { $$ = newExpNode(OpK, $1);
-                                                                     $$->attr.op = '<'; }
-               |  '>'                                             { $$ = newExpNode(OpK, $1);
-                                                                     $$->attr.op = '>'; }
-               |  GEQ                                             { $$ = newExpNode(OpK, $1);
-                                                                     $$->attr.op = GEQ; }
-               |  EQ                                              { $$ = newExpNode(OpK, $1);
-                                                                     $$->attr.op = EQ; }
-               |  NEQ                                             { $$ = newExpNode(OpK, $1);
-                                                                     $$->attr.op = NEQ; }
+relop          :  LEQ                                             { $$ = $1;}
+               |  '<'                                             { $$ = $1;}
+               |  '>'                                             { $$ = $1;}
+               |  GEQ                                             { $$ = $1;}
+               |  EQ                                              { $$ = $1;}
+               |  NEQ                                             { $$ = $1;}
                ;
-minmaxExp      :  minmaxExp minmaxop sumExp                       { $$ = newExpNode(OpK, NULL, $2, $1, $3); }
+minmaxExp      :  minmaxExp minmaxop sumExp                       { $$ = newExpNode(OpK, $2, $1, $3); }
                |  sumExp                                          { $$ = $1; }
                ;
-minmaxop       :  MAX                                             { $$ = newExpNode(OpK, $1); }
-               |  MIN                                             { $$ = newExpNode(OpK, $1); }
+minmaxop       :  MAX                                             { $$ = $1; }
+               |  MIN                                             { $$ = $1; }
                ;
 
-sumExp         :  sumExp sumop mulExp                             { $$ = newExpNode(OpK, NULL, $2, $1, $3); }
+sumExp         :  sumExp sumop mulExp                             { $$ = newExpNode(OpK, $2, $1, $3); }
                |  mulExp                                          { $$ = $1; }
                ;
-sumop          :  '+'                                             { $$ = newExpNode(OpK, $1);
-                                                                     $$->attr.op = '+'; }
-               |  '-'                                             { $$ = newExpNode(OpK, $1);
-                                                                     $$->attr.op = '-'; }
+sumop          :  '+'                                             { $$ = $1;}
+               |  '-'                                             { $$ = $1;}
                ;
-mulExp         :  mulExp mulop unaryExp                           { $$ = newExpNode(OpK, NULL, $2, $1, $3); }
+mulExp         :  mulExp mulop unaryExp                           { $$ = newExpNode(OpK, $2, $1, $3); }
                |  unaryExp                                        { $$ = $1; }
                ;
-mulop          :  '*'                                             { $$ = newExpNode(OpK, $1); }
-               |  '/'                                             { $$ = newExpNode(OpK, $1); }
-               |  '%'                                             { $$ = newExpNode(OpK, $1); }
+mulop          :  '*'                                             { $$ = $1; }
+               |  '/'                                             { $$ = $1; }
+               |  '%'                                             { $$ = $1; }
                ;
-unaryExp       :  unaryop unaryExp                                { $$ = newExpNode(OpK, NULL, $1, $2); }
+unaryExp       :  unaryop unaryExp                                { $$ = newExpNode(OpK, $1, $2); }
                |  factor                                          { $$ = $1; }
                ;
-unaryop        :  '-'                                             { $$ = newExpNode(OpK, $1); }
-               |  '*'                                             { $$ = newExpNode(OpK, $1); }
-               |  '?'                                             { $$ = newExpNode(OpK, $1);/*just $$= $1 and raw chars*/ }
+unaryop        :  '-'                                             {$1->tokenclass=CHSIGN; $$=$1; }
+               |  '*'                                             {$1->tokenclass=SIZEOF; $$=$1; }
+               |  '?'                                             { $$ = $1; }
                ;
 factor         :  immutable                                       { $$ = $1; }
                |  mutable                                         { $$ = $1; }
@@ -362,7 +354,7 @@ char *tokenToStr(int type)
 }
 
 int main(int argc, char **argv) {
-   //yylval.tinfo.linenum = 1;
+   //yylval.tokdenData.linenum = 1;
    int index;
    char *file = NULL;
    bool dotAST = false;             // make dot file of AST
