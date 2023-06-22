@@ -17,16 +17,16 @@ int line = 1;
  // need this to communicate between .l and .y files
 int setValue(int linenum, int tokenClass, char *svalue) {
     //cout << "setvalue:  " << linenum << ", " << tokenClass << ", " << svalue << endl;
-    yylval.tinfo->tokenclass = tokenClass;
-    yylval.tinfo->linenum;
-    yylval.tinfo->tokenstr = lastToken = strdup(svalue);
-    yylval.tinfo->cvalue = svalue[0];
-    yylval.tinfo->nvalue = atoi(svalue); // check to see if should be ll
-    yylval.tinfo->svalue = strdup(svalue);
+    yylval.tokenData->tokenclass = tokenClass;
+    yylval.tokenData->linenum;
+    yylval.tokenData->tokenstr = lastToken = strdup(svalue);
+    yylval.tokenData->cvalue = svalue[0];
+    yylval.tokenData->nvalue = atoi(svalue); // check to see if should be ll
+    yylval.tokenData->svalue = strdup(svalue);
 
     switch (tokenClass) {
         case BOOLCONST:
-            yylval.tinfo->nvalue = ((lastToken[0]==tokenClass) ? 1 : 0);
+            yylval.tokenData->nvalue = ((lastToken[0]==tokenClass) ? 1 : 0);
             break;
         // cases for STRINGCONST & CHARCONST
     }
@@ -37,6 +37,7 @@ int setValue(int linenum, int tokenClass, char *svalue) {
 %}
 
 %option noyywrap
+
 %%
 letter      [a-zA-Z]
 digit       [0-9]
