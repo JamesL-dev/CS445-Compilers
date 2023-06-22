@@ -3,6 +3,7 @@
 #include <iostream>
 #include <Stdlib.h>
 #include <unistd.h>
+#include "treeNodes.h"
 #include "treeUtils.h"
 #include "scanType.h"
 #include "dot.h"
@@ -11,33 +12,47 @@ using namespace std;
 extern "C" int yylex();
 extern "C" int yyparse();
 extern "C" FILE *yyin;
-int numErrors;
-int numWarnings;
+
+int numErrors = 0;
+int numWarnings = 0;
 extern int line;
 extern int yylex();
+extern FILE *listing;
+void yyerror(const char *msg);
 
-TreeNode *addSibling(TreeNode *t, TreeNode *s)
-{
-  // make sure s is not null. if it is this s a major error, exit the program!
-  // Make sure t is not null. if it is, just return s
-  // look down t's sibling list until you fin with with sibbling = null(the end of the list) and add s there.
-  return s;
+TreeNode *addSibling(TreeNode *t, TreeNode *s) {
+   // finish
+   //check  for null
+   if(s == NULL) {
+      printf("ERROR (system): no sibling\n");
+      exit (1); // for big problem
+   }
+   if (t == NULL) {
+      return s;
+   }
+   TreeNode *nodePtr = t;
+   while (nodePtr->sibling != NULL) {
+      nodePtr = nodePtr->sibling;
+   }
+   nodePtr->sibling = s;
+   // end of linked list
+   return t;
 }
 
-// pass the static and type attribute down the sibling list
-void setType(TreeNode *t, ExpType type, bool isStatic)
+ // pass the static and type attribute down the sibling list
+TreeNode *setType(TreeNode *t, ExpType type, bool isStatic)
 {
-  while(t) 
-  {
-    //set t->type and t->static
-    t = t-> siblingl;
-  }
+   while (t) {
+      // set t->type and t->isStatic
+      t->type = type;
+      t->isStatic = isStatic;
+      t = t->sibling;
+   }
+   return t;
 }
 
 // the syntax tree goes here
 TreeNode *syntaxTree;
-
-void yyerror(const char *msg);
 
 %}
 %union
@@ -46,665 +61,238 @@ void yyerror(const char *msg);
   TreeNode *tree;
   ExpType type; // for passing type spec up the tree
 }
+%type <tokenData> assignop minmaxop mulop relop sumop unaryop
 
-
-%type <tree> program declList decl varDecl scopedVarDecl varDeclList varDeclInit
-%type <tree> varDeclId funDecl parms parmList parmTypeList parmIdList parmId stmt
-%type <tree> stmtUnmatched stmtMatched expStmt compountStmt localDecls stmtList
-%type <tree> selectStmtUnmatched selectStmtMatched iterStmtUnmatched iterStmtMatched iterRange
-%type <tree> returnStmt breakStmt exp assignop simpleExp andExp unaryRelExp relExp relOp sumExp
-%type <tree> factor mutable immutable call args argList constant
+%type <tree> andExp argList args breakStmt call compoundStmt constant
+%type <tree> declList decl expStmt exp factor funDecl immutable iterRange
+%type <tree> precomList
+%type <tree> localDecls minmaxExp mulExp mutable parmIdList
+%type <tree> parmId parmList parmTypeList parms program relExp returnStmt
+%type <tree> scopedVarDecl simpleExp stmtList stmt sumExp
+%type <tree> unaryExp unaryRelExp varDeclId varDeclInit varDeclList
+%type <tree> varDecl
+%type <tree> matched unmatched
 
 %type <type> typeSpec
-%token <tokenData> '(' ')' ',' ';' '[' '{' '}' ']' ':‘
- // %token <tokenData> ADD SUB MUL DIV MOD INC DEC QUESTION // Add to single character operators above
-%token <tokdenData> FIRSTOP
-%type <tokenData> sumOp mulExp mulOp unaryExp unaryOp
-%token <tokenData> GT GEQ LT LEQ EQ NEQ
-%token <tokdenData> LASTOP
-// terms go here ie: numconst return break;
+// we require that ops come before other tokens and be followed by LASTOP and preceded by FIRSTOP
+// IMPORTANT: see token string name mapping largerTokens[] below
+%token <tokenData> FIRSTOP
+%token <tokenData> ADDASS AND DEC DIVASS EQ GEQ INC LEQ MAX MIN MULASS NEQ NOT OR SUBASS
+%token <tokenData> CHSIGN SIZEOF
+%token <tokenData> '*' '+' '-' '/' '<' '=' '>' '%' '?'
+%token <tokenData> PRECOMPILER
+%token <tokenData> LASTOP
 
-// Remove all single character operators from these
-%token <tokenData> PRECOMPILER PRECOMPILER2
-%token <tokenData> NUMCONST BOOLCONST CHARCONST STRINGCONST ID
-%token <tokenData> INT BOOL CHAR STATIC
-%token <tokenData> ASS ADDASS SUBASS MULASS DIVASS MIN MAX
-%token <tokenData> IF THEN ELSE WHILE FOR TO BY DO
-%token <tokenData> COLON SEMICOLON COMMA
-%token <tokenData> RETURN BREAK
-%token <tokenData> AND OR NOT
-%token <tokenData> RPAREN LPAREN RBRACK LBRACK LCURLY RCURLY
-%token <tokdenData> LASTTERM
+// we require that all token classes larger than 255 be followed by LASTTERM
+%token <tokenData> BOOL BREAK BY CHAR DO ELSE FOR IF INT RETURN STATIC THEN TO WHILE
+%token <tokenData> BOOLCONST CHARCONST ID NUMCONST STRINGCONST
+%token <tokenData> '(' ')' ',' ';' '[' '{' '}' ']' ':'
+%token <tokenData> LASTTERM
 
 %%
-program                 : declList
-                        {
-                            $$ = $1;
-                            syntaxTree = $$;
-                        }
-                        ;
+program        :  precomList declList                             { syntaxTree = $2; }
+               |  declList                                        { syntaxTree = $1; }
+               ;
+precomList     :  precomList PRECOMPILER                          { $$ = $1; }
+               |  PRECOMPILER                                     { printf("%s\n", yylval.tinfo->tokenstr); }
+               ;
+declList       :  declList decl                                   { $$ = addSibling($1, $2); }
+               |  decl                                            { $$ = $1; }
+               ;
+decl           :  varDecl                                         { $$ = $1; }
+               |  funDecl                                         { $$ = $1; }
+               ;
+varDecl        :  typeSpec varDeclList ';'                        { $$ = $2; setType($2, $1, false); }
+               ;
+scopedVarDecl  :  STATIC typeSpec varDeclList ';'                 { $$ = $3; setType($3, $2, true); yyerrok; }
+               |  typeSpec varDeclList ';'                        { $$ = $2; setType($2, $1, false); yyerrok; }
+               ;
+varDeclList    :  varDeclList ',' varDeclInit                     { $$ = addSibling($1, $3); yyerrok; }
+               |  varDeclInit                                     { $$ = $1; }
+               ;
+varDeclInit    :  varDeclId                                       { $$ = $1; }
+               |  varDeclId ':' simpleExp                         { $$ = $1; 
+                                                                     if ($$ != NULL) $$->child[0] = $3; }
+               ;
+varDeclId      :  ID                                              { $$ = newDeclNode(VarK, UndefinedType, $1);
+                                                                     $$->isArray = false;
+                                                                     $$->size = 1; }
+               |  ID '[' NUMCONST ']'                             { $$ = newDeclNode(VarK, UndefinedType, $1);
+                                                                     $$->isArray = true;
+                                                                     $$->size = $3->nvalue + 1; }
+               ;
+typeSpec       :  INT                                             { $$ = Integer; }
+               |  BOOL                                            { $$ = Boolean; }
+               |  CHAR                                            { $$ = Char; }
+               ;
+funDecl        :  typeSpec ID '(' parms ')' stmt                  { $$ = newDeclNode(FuncK, $1, $2, $4, $6); }
+               |  ID '(' parms ')' stmt                           { $$ = newDeclNode(FuncK, Void, $1, $3, $5); } 
+               ;
+parms          :  parmList                                        { $$ = $1; }
+               |  /* empty */                                     { $$ = NULL; }
+               ;
+parmList       :  parmList ';' parmTypeList                       { $$ = addSibling($1, $3); }
+               |  parmTypeList                                    { $$ = $1; }
+               ;
+parmTypeList   :  typeSpec parmIdList                             { $$ = $2; setType($2, $1, false); }
+               ;
+parmIdList     :  parmIdList ',' parmId                           { $$ = addSibling($1, $3); yyerrok; }
+               |  parmId                                          { $$ = $1; }
+               ;
+parmId         :  ID                                              { $$ = newDeclNode(ParamK, UndefinedType, $1); }
+               |  ID '[' ']'                                      { $$ = newDeclNode(ParamK, UndefinedType, $1); }
+               ;
+stmt           :  matched                                         { $$ = $1; }
+               |  unmatched                                       { $$ = $1; }
+               ;
+matched        :  IF simpleExp THEN matched ELSE matched          { $$ = newStmtNode(IfK, $1, $2, $4, $6); }
+               |  WHILE simpleExp DO matched                      { $$ = newStmtNode(WhileK, $1, $2, $4); }
+               |  FOR ID '=' iterRange DO matched                 { $$ = newStmtNode(ForK, $1, NULL, $4, $6);
+                                                                     $$->child[0] = newDeclNode(VarK, Integer, $2);
+                                                                     $$->child[0]->attr.name = $2->svalue;
+                                                                     $$->child[0]->isArray = false; }
+               |  expstmt                                         { $$ = $1; }
+               |  compoundstmt                                    { $$ = $1; }
+               |  returnstmt                                      { $$ = $1; }
+               |  breakstmt                                       { $$ = $1; }
+               ;
+iterRange      :  simpleExp TO simpleExp                          {$$ = newStmtNode(RangeK, $2, $1, $3); }
+               |  simpleExp TO simpleExp BY simpleExp             {$$ = newStmtNode(RangeK, $2, $1, $3, $5); }
+               ;
+unmatched      :  IF simpleExp THEN stmt                          { $$ = newStmtNode(IfK, $1, $2, $4); }
+               |  IF simpleExp THEN matched ELSE unmatched        { $$ = newStmtNode(IfK, $1, $2, $4, $6); }
+               |  WHILE simpleExp DO unmatched                    { $$ = newStmtNode(WhileK, $1, $2, $4); }
+               |  FOR ID '=' iterRange DO unmatched               { $$ = newStmtNode(ForK, $1, NULL, $4, $6);
+                                                                     $$->child[0] = newDeclNode(VarK, Integer, $2);
+                                                                     $$->child[0]->attr.name = $2->svalue;
+                                                                     $$->child[0]->isArray = false;
+                                                                     $$->child[0]->size = 1; }
+               ;
+expstmt        :  exp ';'                                         { $$ = $1; }
+               ;
+compoundstmt   :  '{' localDecls stmtList '}'                     { $$ = newStmtNode(CompoundK, $1, $2, $3); yyerrok; }
+               ;
+localDecls     :  localDecls scopedVarDecl                        { $$ = addSibling($1, $2); }
+               |  /* empty */                                     { $$ = NULL; }
+               ;
+stmtList       :  stmtList stmt                                   { $$ = ($2 == NULL ? $1 : addSibling($1, $2)); }
+               |  /* empty */                                     { $$ = NULL; }
+               ;
+returnstmt     :  RETURN ';'                                      { $$ = newStmtNode(ReturnK, $1); }
+               |  RETURN exp ';'                                  { $$ = newStmtNode(ReturnK, $1, $2); yyerrok; }
+               ;
+breakstmt      :  BREAK ';'                                       { $$ = newStmtNode(BreakK, $1); }
+               ;
+exp            :  mutable assignop exp                            { $$ = newExpNode(AssignK, NULL, $2, $1, $3); }
+               |  mutable INC                                     { $$ = newExpNode(AssignK, $2, $1); }
+               |  mutable DEC                                     { $$ = newExpNode(AssignK, $2, $1); }
+               |  simpleExp                                       { $$ = $1; }
+               ;
+assignop       :  '='                                             { $$ = newExpNode(OpK, $1);  }
+               |  ADDASS                                          { $$ = newExpNode(OpK, $1);  }
+               |  SUBASS                                          { $$ = newExpNode(OpK, $1);  }
+               |  MULASS                                          { $$ = newExpNode(OpK, $1);  }
+               |  DIVASS                                          { $$ = newExpNode(OpK, $1); /*$1;*/ }
+               ;
+simpleExp      :  simpleExp OR andExp                             { $$ = newExpNode(OpK, $2, $1, $3); }
+               |  andExp                                          { $$ = $1; }
+               ;
+andExp         :  andExp AND unaryRelExp                          { $$ = newExpNode(OpK, $2, $1, $3); }
+               |  unaryRelExp                                     { $$ = $1; }
+               ;
+unaryRelExp    :  NOT unaryRelExp                                 { $$ = newExpNode(OpK, $1, $2);
+                                                                     $$->attr.op = NOT; }
+               |  relExp                                          { $$ = $1; }
+               ;
+relExp         :  minmaxExp relop minmaxExp                       { $$ = $1; }
+               |  minmaxExp                                       { $$ = $1; }
+               ; 
+relop          :  LEQ                                             { $$ = newExpNode(OpK, $1);
+                                                                     $$->attr.op = LEQ; }
+               |  '<'                                             { $$ = newExpNode(OpK, $1);
+                                                                     $$->attr.op = '<'; }
+               |  '>'                                             { $$ = newExpNode(OpK, $1);
+                                                                     $$->attr.op = '>'; }
+               |  GEQ                                             { $$ = newExpNode(OpK, $1);
+                                                                     $$->attr.op = GEQ; }
+               |  EQ                                              { $$ = newExpNode(OpK, $1);
+                                                                     $$->attr.op = EQ; }
+               |  NEQ                                             { $$ = newExpNode(OpK, $1);
+                                                                     $$->attr.op = NEQ; }
+               ;
+minmaxExp      :  minmaxExp minmaxop sumExp                       { $$ = newExpNode(OpK, NULL, $2, $1, $3); }
+               |  sumExp                                          { $$ = $1; }
+               ;
+minmaxop       :  MAX                                             { $$ = newExpNode(OpK, $1); }
+               |  MIN                                             { $$ = newExpNode(OpK, $1); }
+               ;
 
-declList                : declList decl
-                        {
-                            $$ = $1;
-                            $$->addSibling($2);
-                        }
-                        | decl
-                        {
-                            $$ = $1;
-                        }
-                        ;
-
-decl                    : varDecl
-                        {
-                            $$ = $1;
-                        }
-                        | funDecl
-                        {
-                            $$ = $1;
-                        }
-                        ;
-
-varDecl                 : typeSpec varDeclList SEMICOLON
-                        {
-                            $$ = $2;
-                            Var *tree = (Var *)$$;
-                            tree->setType($1);
-                        }
-                        ;
-
-scopedVarDecl           : STATIC typeSpec varDeclList SEMICOLON
-                        {
-                            $$ = $3;
-                            Var *tree = (Var *)$$;
-                            tree->setType($2);
-                            tree->makeStatic();
-                        }
-                        | typeSpec varDeclList SEMICOLON
-                        {
-                            $$ = $2;
-                            Var *tree = (Var *)$$;
-                            tree->setType($1);
-                        }
-                        ;
-
-varDeclList             : varDeclList COMMA varDeclInit
-                        {
-                            $$ = $1;
-                            $$->addSibling($3);
-                        }
-                        | varDeclInit
-                        {
-                            $$ = $1;
-                        }
-                        ;
-
-varDeclInit             : varDeclId
-                        {
-                            $$ = $1;
-                        }
-                        | varDeclId COLON simpleExp
-                        {
-                            $$ = $1;
-                            $$->addChild($3);
-                        }
-                        ;
-
-varDeclId               : ID
-                        {
-                            $$ = new Var($1->tokenLineNum, new Primitive(Primitive::Type::Void), $1->tokenContent);
-                        }
-                        | ID LBRACK NUMCONST RBRACK
-                        {
-                            $$ = new Var($1->tokenLineNum, new Primitive(Primitive::Type::Void, true), $1->tokenContent);
-                        }
-                        ;
-
-typeSpec                : INT
-                        {
-                            $$ = Primitive::Type::Int;
-                        }
-                        | BOOL
-                        {
-                            $$ = Primitive::Type::Bool;
-                        }
-                        | CHAR
-                        {
-                            $$ = Primitive::Type::Char;
-                        }
-                        ;
-
-funDecl                 : typeSpec ID LPAREN parms RPAREN compoundStmt
-                        {
-                            $$ = new Func($2->tokenLineNum, new Primitive($1), $2->tokenContent);
-                            $$->addChild($4);
-                            $$->addChild($6);
-                        }
-                        | ID LPAREN parms RPAREN compoundStmt
-                        {
-                            $$ = new Func($1->tokenLineNum, new Primitive(Primitive::Type::Void), $1->tokenContent);
-                            $$->addChild($3);
-                            $$->addChild($5);
-                        }
-                        ;
-
-parms                   : parmList
-                        {
-                            $$ = $1;
-                        }
-                        |
-                        {
-                            $$ = nullptr;
-                        }
-                        ;
-
-parmList                : parmList SEMICOLON parmTypeList
-                        {
-                            $$ = $1;
-                            $$->addSibling($3);
-                        }
-                        | parmTypeList
-                        {
-                            $$ = $1;
-                        }
-                        ;
-
-parmTypeList            : typeSpec parmIdList
-                        {
-                            $$ = $2;
-                            Parm *tree = (Parm *)$$;
-                            tree->setType($1);
-                        }
-                        ;
-
-parmIdList              : parmIdList COMMA parmId
-                        {
-                            if ($1 == nullptr)
-                            {
-                                $$ = $3;
-                            }
-                            else
-                            {
-                                $$ = $1;
-                                $$->addSibling($3);
-                            }
-                        }
-                        | parmId
-                        {
-                            $$ = $1;
-                        }
-                        ;
-
-parmId                  : ID
-                        {
-                            $$ = new Parm($1->tokenLineNum, new Primitive(Primitive::Type::Void), $1->tokenContent);
-                        }
-                        | ID LBRACK RBRACK
-                        {
-                            $$ = new Parm($1->tokenLineNum, new Primitive(Primitive::Type::Void, true), $1->tokenContent);
-                        }
-                        ;
-
-stmt                    : stmtUnmatched
-                        {
-                            $$ = $1;
-                        }
-                        | stmtMatched
-                        {
-                            $$ = $1;
-                        }
-                        ;
-
-stmtUnmatched           : selectStmtUnmatched
-                        {
-                            $$ = $1;
-                        }
-                        | iterStmtUnmatched
-                        {
-                            $$ = $1;
-                        }
-                        ;
-
-stmtMatched             : selectStmtMatched
-                        {
-                            $$ = $1;
-                        }
-                        | iterStmtMatched
-                        {
-                            $$ = $1;
-                        }
-                        | expStmt
-                        {
-                            $$ = $1;
-                        }
-                        | compoundStmt
-                        {
-                            $$ = $1;
-                        }
-                        | returnStmt
-                        {
-                            $$ = $1;
-                        }
-                        | breakStmt
-                        {
-                            $$ = $1;
-                        }
-                        ;
-
-expStmt                 : exp SEMICOLON
-                        {
-                            $$ = $1;
-                        }
-                        | SEMICOLON
-                        {
-                            $$ = nullptr;
-                        }
-                        ;
-
-compoundStmt            : LCURLY localDecls stmtList RCURLY
-                        {
-                            $$ = new Compound($1->tokenLineNum);
-                            $$->addChild($2);
-                            $$->addChild($3);
-                        }
-                        ;
-
-localDecls              : localDecls scopedVarDecl
-                        {
-                            if ($1 == nullptr)
-                            {
-                                $$ = $2;
-                            }
-                            else
-                            {
-                                $$ = $1;
-                                $$->addSibling($2);
-                            }
-                        }
-                        |
-                        {
-                            $$ = nullptr;
-                        }
-                        ;
-
-stmtList                : stmtList stmt
-                        {
-                            if ($1 == nullptr)
-                            {
-                                $$ = $2;
-                            }
-                            else
-                            {
-                                $$ = $1;
-                                $$->addSibling($2);
-                            }
-                        }
-                        |
-                        {
-                            $$ = nullptr;
-                        }
-                        ;
-
-selectStmtUnmatched     : IF simpleExp THEN stmt
-                        {
-                            $$ = new If($1->tokenLineNum);
-                            $$->addChild($2);
-                            $$->addChild($4);
-                        }
-                        | IF simpleExp THEN stmtMatched ELSE stmtUnmatched
-                        {
-                            $$ = new If($1->tokenLineNum);
-                            $$->addChild($2);
-                            $$->addChild($4);
-                            $$->addChild($6);
-                        }
-                        ;
-
-selectStmtMatched       : IF simpleExp THEN stmtMatched ELSE stmtMatched
-                        {
-                            $$ = new If($1->tokenLineNum);
-                            $$->addChild($2);
-                            $$->addChild($4);
-                            $$->addChild($6);
-                        }
-                        ;
-
-iterStmtUnmatched       : WHILE simpleExp DO stmtUnmatched
-                        {
-                            $$ = new While($1->tokenLineNum);
-                            $$->addChild($2);
-                            $$->addChild($4);
-                        }
-                        | FOR ID ASGN iterRange DO stmtUnmatched
-                        {
-                            $$ = new For($1->tokenLineNum);
-                            Var *tree = new Var($2->tokenLineNum, new Primitive(Primitive::Type::Int), $2->tokenContent);
-                            $$->addChild(tree);
-                            $$->addChild($4);
-                            $$->addChild($6);
-                        }
-                        ;
-
-iterStmtMatched         : WHILE simpleExp DO stmtMatched
-                        {
-                            $$ = new While($1->tokenLineNum);
-                            $$->addChild($2);
-                            $$->addChild($4);
-                        }
-                        | FOR ID ASGN iterRange DO stmtMatched
-                        {
-                            $$ = new For($1->tokenLineNum);
-                            Var *tree = new Var($2->tokenLineNum, new Primitive(Primitive::Type::Int), $2->tokenContent);
-                            $$->addChild(tree);
-                            $$->addChild($4);
-                            $$->addChild($6);
-                        }
-                        ;
-
-iterRange               : simpleExp TO simpleExp
-                        {
-                            $$ = new Range($1->getTokenLineNum());
-                            $$->addChild($1);
-                            $$->addChild($3);
-                        }
-                        | simpleExp TO simpleExp BY simpleExp
-                        {
-                            $$ = new Range($1->getTokenLineNum());
-                            $$->addChild($1);
-                            $$->addChild($3);
-                            $$->addChild($5);
-                        }
-                        ;
-
-returnStmt              : RETURN SEMICOLON
-                        {
-                            $$ = new Return($1->tokenLineNum);
-                        }
-                        | RETURN exp SEMICOLON
-                        {
-                            $$ = new Return($1->tokenLineNum);
-                            $$->addChild($2);
-                        }
-                        ;
-
-breakStmt               : BREAK SEMICOLON
-                        {
-                            $$ = new Break($1->tokenLineNum);
-                        }
-                        ;
-
-exp                     : mutable assignop exp
-                        {
-                            $$ = $2;
-                            $$->addChild($1);
-                            $$->addChild($3);
-                        }
-                        | mutable INC
-                        {
-                            $$ = new UnaryAsgn($1->getTokenLineNum(), UnaryAsgn::Type::Inc);
-                            $$->addChild($1);
-                        }
-                        | mutable DEC
-                        {
-                            $$ = new UnaryAsgn($1->getTokenLineNum(), UnaryAsgn::Type::Dec);
-                            $$->addChild($1);
-                        }
-                        | simpleExp
-                        {
-                            $$ = $1;
-                        }
-                        ;
-
-assignop                : ASGN
-                        {
-                            $$ = new Asgn($1->tokenLineNum, Asgn::Type::Asgn);
-                        }
-                        | ADDASGN
-                        {
-                            $$ = new Asgn($1->tokenLineNum, Asgn::Type::AddAsgn);
-                        }
-                        | SUBASGN
-                        {
-                            $$ = new Asgn($1->tokenLineNum, Asgn::Type::SubAsgn);
-                        }
-                        | MULASGN
-                        {
-                            $$ = new Asgn($1->tokenLineNum, Asgn::Type::MulAsgn);
-                        }
-                        | DIVASGN
-                        {
-                            $$ = new Asgn($1->tokenLineNum, Asgn::Type::DivAsgn);
-                        }
-                        ;
-
-simpleExp               : simpleExp OR andExp
-                        {
-                            $$ = new Binary($1->getTokenLineNum(), Binary::Type::Or);
-                            $$->addChild($1);
-                            $$->addChild($3);
-                        }
-                        | andExp
-                        {
-                            $$ = $1;
-                        }
-                        ;
-
-andExp                  : andExp AND unaryRelExp
-                        {
-                            $$ = new Binary($1->getTokenLineNum(), Binary::Type::And);
-                            $$->addChild($1);
-                            $$->addChild($3);
-                        }
-                        | unaryRelExp
-                        {
-                            $$ = $1;
-                        }
-                        ;
-
-unaryRelExp             : NOT unaryRelExp
-                        {
-                            $$ = new Unary($1->tokenLineNum, Unary::Type::Not);
-                            $$->addChild($2);
-                        }
-                        | relExp
-                        {
-                            $$ = $1;
-                        }
-                        ;
-
-relExp                  : sumExp relOp sumExp
-                        {
-                            $$ = $2;
-                            $$->addChild($1);
-                            $$->addChild($3);
-                        }
-                        | sumExp
-                        {
-                            $$ = $1;
-                        }
-                        ;
-
-relOp                   : LT
-                        {
-                            $$ = new Binary($1->tokenLineNum, Binary::Type::LT);
-                        }
-                        | LEQ
-                        {
-                            $$ = new Binary($1->tokenLineNum, Binary::Type::LEQ);
-                        }
-                        | GT
-                        {
-                            $$ = new Binary($1->tokenLineNum, Binary::Type::GT);
-                        }
-                        | GEQ
-                        {
-                            $$ = new Binary($1->tokenLineNum, Binary::Type::GEQ);
-                        }
-                        | EQ
-                        {
-                            $$ = new Binary($1->tokenLineNum, Binary::Type::EQ);
-                        }
-                        | NEQ
-                        {
-                            $$ = new Binary($1->tokenLineNum, Binary::Type::NEQ);
-                        }
-                        ;
-
-sumExp                  : sumExp sumOp mulExp
-                        {
-                            $$ = $2;
-                            $$->addChild($1);
-                            $$->addChild($3);
-                        }
-                        | mulExp
-                        {
-                            $$ = $1;
-                        }
-                        ;
-
-sumOp                   : ADD
-                        {
-                            $$ = new Binary($1->tokenLineNum, Binary::Type::Add);
-                        }
-                        | SUB
-                        {
-                            $$ = new Binary($1->tokenLineNum, Binary::Type::Sub);
-                        }
-                        ;
-
-mulExp                  : mulExp mulOp unaryExp
-                        {
-                            $$ = $2;
-                            $$->addChild($1);
-                            $$->addChild($3);
-                        }
-                        | unaryExp
-                        {
-                            $$ = $1;
-                        }
-                        ;
-
-mulOp                   : MUL
-                        {
-                            $$ = new Binary($1->tokenLineNum, Binary::Type::Mul);
-                        }
-                        | DIV
-                        {
-                            $$ = new Binary($1->tokenLineNum, Binary::Type::Div);
-                        }
-                        | MOD
-                        {
-                            $$ = new Binary($1->tokenLineNum, Binary::Type::Mod);
-                        }
-                        ;
-
-unaryExp                : unaryOp unaryExp
-                        {
-                            $$ = $1;
-                            $$->addChild($2);
-                        }
-                        | factor
-                        {
-                            $$ = $1;
-                        }
-                        ;
-
-unaryOp                 : SUB
-                        {
-                            $$ = new Unary($1->tokenLineNum, Unary::Type::Chsign);
-                        }
-                        | MUL
-                        {
-                            $$ = new Unary($1->tokenLineNum, Unary::Type::Sizeof);
-                        }
-                        | QUESTION
-                        {
-                            $$ = new Unary($1->tokenLineNum, Unary::Type::Question);
-                        }
-                        ;
-
-factor                  : mutable
-                        {
-                            $$ = $1;
-                        }
-                        | immutable
-                        {
-                            $$ = $1;
-                        }
-                        ;
-
-mutable                 : ID
-                        {
-                            $$ = new Id($1->tokenLineNum, $1->tokenContent);
-                        }
-                        | ID LBRACK exp RBRACK
-                        {
-                            $$ = new Binary($1->tokenLineNum, Binary::Type::Index);
-                            Id *tree = new Id($1->tokenLineNum, $1->tokenContent, true);
-                            $$->addChild(tree);
-                            $$->addChild($3);
-                        }
-                        ;
-
-immutable               : LPAREN exp RPAREN
-                        {
-                            $$ = $2;
-                        }
-                        | call
-                        {
-                            $$ = $1;
-                        }
-                        | constant
-                        {
-                            $$ = $1;
-                        }
-                        ;
-
-call                    : ID LPAREN args RPAREN
-                        {
-                            $$ = new Call($1->tokenLineNum, $1->tokenContent);
-                            $$->addChild($3);
-                        }
-                        ;
-
-args                    : argList
-                        {
-                            $$ = $1;
-                        }
-                        |
-                        {
-                            $$ = nullptr;
-                        }
-                        ;
-
-argList                 : argList COMMA exp
-                        {
-                            $$ = $1;
-                            $$->addSibling($3);
-                        }
-                        | exp
-                        {
-                            $$ = $1;
-                        }
-                        ;
-
-constant                : NUMCONST
-                        {
-                            $$ = new Const($1->tokenLineNum, Const::Type::Int, $1->tokenContent);
-                        }
-                        | BOOLCONST
-                        {
-                            $$ = new Const($1->tokenLineNum, Const::Type::Bool, $1->tokenContent);
-                        }
-                        | CHARCONST
-                        {
-                            $$ = new Const($1->tokenLineNum, Const::Type::Char, $1->tokenContent);
-                        }
-                        | STRINGCONST
-                        {
-                            $$ = new Const($1->tokenLineNum, Const::Type::String, $1->tokenContent);
-                        }
-                        ;
+sumExp         :  sumExp sumop mulExp                             { $$ = newExpNode(OpK, NULL, $2, $1, $3); }
+               |  mulExp                                          { $$ = $1; }
+               ;
+sumop          :  '+'                                             { $$ = newExpNode(OpK, $1);
+                                                                     $$->attr.op = '+'; }
+               |  '-'                                             { $$ = newExpNode(OpK, $1);
+                                                                     $$->attr.op = '-'; }
+               ;
+mulExp         :  mulExp mulop unaryExp                           { $$ = newExpNode(OpK, NULL, $2, $1, $3); }
+               |  unaryExp                                        { $$ = $1; }
+               ;
+mulop          :  '*'                                             { $$ = newExpNode(OpK, $1); }
+               |  '/'                                             { $$ = newExpNode(OpK, $1); }
+               |  '%'                                             { $$ = newExpNode(OpK, $1); }
+               ;
+unaryExp       :  unaryop unaryExp                                { $$ = newExpNode(OpK, NULL, $1, $2); }
+               |  factor                                          { $$ = $1; }
+               ;
+unaryop        :  '-'                                             { $$ = newExpNode(OpK, $1); }
+               |  '*'                                             { $$ = newExpNode(OpK, $1); }
+               |  '?'                                             { $$ = newExpNode(OpK, $1);/*just $$= $1 and raw chars*/ }
+               ;
+factor         :  immutable                                       { $$ = $1; }
+               |  mutable                                         { $$ = $1; }
+               ;
+mutable        :  ID                                              { $$ = newExpNode(IdK, $1);
+                                                                     $$->isArray = false; }
+               |  ID '[' exp ']'                                  { $$ = newExpNode(OpK, $2, NULL, $3);
+                                                                     $$->child[0] = newExpNode(IdK, $1);
+                                                                     $$->child[0]->attr.name = $1->svalue;
+                                                                     $$->isArray = false; }
+               ;
+immutable      :  '(' exp ')'                                     { $$ = $2; }
+               |  call                                            { $$ = $1; }
+               |  constant                                        { $$ = $1; }
+               ;
+call           :  ID '(' args ')'                                 { $$ = newExpNode(CallK, $1, $3);
+                                                                     $$->attr.name = $1->svalue; }
+               ;
+args           :  argList                                         { $$ = $1; }
+               |  /* empty */                                     { $$ = NULL; }
+               ;
+argList        :  argList ',' exp                                 { $$ = addSibling($1, $3); yyerrok; }
+               |  exp                                             { $$ = $1; }
+               ;
+constant       :  NUMCONST                                        { $$ = newExpNode(ConstantK, $1);
+                                                                     $$->attr.value = $1->nvalue;
+                                                                     $$->type = Integer;
+                                                                     $$->isArray = false;
+                                                                     $$->size = 1; }
+               |  CHARCONST                                       { $$ = newExpNode(ConstantK, $1);
+                                                                     $$->attr.value = $1->cvalue;
+                                                                     $$->type = Char;
+                                                                     $$->isArray = false;
+                                                                     $$->size = 1; }
+               |  STRINGCONST                                     { $$ = newExpNode(ConstantK, $1);
+                                                                     $$->attr.string = $1->svalue;
+                                                                     $$->type = Char;
+                                                                     $$->isArray = true;
+                                                                     $$->size = 1; }
+               |  BOOLCONST                                       { $$ = newExpNode(ConstantK, $1);
+                                                                     $$->attr.value = $1->nvalue;
+                                                                     $$->type = Boolean;
+                                                                     $$->isArray = false;
+                                                                     $$->size = 1; }
+               ;
 %%
 void yyerror (const char *msg)
 { 
@@ -753,6 +341,24 @@ largerTokens[THEN] = (char *)"then";
 largerTokens[TO] = (char *)"to";
 largerTokens[WHILE] = (char *)"while";
 largerTokens[LASTTERM] = (char *)"lastterm";
+}
+
+static char tokenBuffer[16];
+char *tokenToStr(int type)
+  { 
+   if (type>LASTTERM) {
+   return (char*)"UNKNOWN";
+    }
+    else if (type>256) {
+   return largerTokens[type];
+    }
+    else if ((type<32) || (type>127)) {
+   sprintf(tokenBuffer, "Token#%d", type);
+    } else {
+   tokenBuffer[0] = type;
+   tokenBuffer[1] = '\0';
+    }
+    return tokenBuffer;
 }
 
 int main(int argc, char **argv) {

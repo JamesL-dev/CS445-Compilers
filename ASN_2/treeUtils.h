@@ -4,6 +4,9 @@
 #include "scanType.h"
 #include <string.h>
 
+// FILE * listing
+extern int lineno; // source line number for listing
+
 // lots of these save the TokenData block so line number and yytext are saved
 TreeNode *cloneNode(TreeNode *currnode);
 TreeNode *newDeclNode(DeclKind kind,
@@ -23,9 +26,12 @@ TreeNode *newExpNode(ExpKind kind,
                      TreeNode *c1=NULL,
                      TreeNode *c2=NULL);
 char *tokenToStr(int type);
+char *varKindToStr(int kind);
 char *expTypeToStr(ExpType type, bool isArray=false, bool isStatic=false);
 
 void printTreeNode(FILE *out, TreeNode *syntaxTree, bool showExpType, bool showAllocation);
 void printTree(FILE *out, TreeNode *syntaxTree, bool showExpType, bool showAllocation);
+
+static void printSpaces(void);
 
 #endif
