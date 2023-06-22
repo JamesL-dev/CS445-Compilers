@@ -37,7 +37,7 @@ int setValue(int linenum, int tokenClass, char *svalue) {
 %}
 
 %option noyywrap
-
+%%
 letter      [a-zA-Z]
 digit       [0-9]
 quote       [\']
@@ -50,8 +50,6 @@ op   	    [\(\)\*\+\,\-\/\:\;\<\=\>\?\[\]\%\{\}]
 charconst2  [\']\\?.[\']
 charconst3  [\'](\\[^\n]|[^\'\\\n]*)[\']
 comment     \/\/.*
-
-%%
 
 "++"                { return setValue(line, INC, yytext); }
 "--"                { return setValue(line, DEC, yytext); }
