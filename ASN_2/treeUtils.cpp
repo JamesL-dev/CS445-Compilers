@@ -25,8 +25,6 @@ char *varKindToStr(int kind)
     }
 }
 
-
-
 // print a node without a newline
 void printTreeNode(FILE *listing,
                    TreeNode *tree,
@@ -120,11 +118,11 @@ void printTreeNode(FILE *listing,
             case Char:
                 if (tree->isArray) {
                     fprintf(listing, "Const ");
-                    printf("\"");
+                    //printf("\""); // COME BACK LATER FOR SOME REASON this may or may not be useful in next assignment
                     for (int i=0; i<tree->size-1; i++) {
                         printf("%c", tree->attr.string[i]);
                     }
-                    printf("\"");
+                    //printf("\"");
                 }
       else fprintf(listing, "Const '%c'", tree->attr.cvalue);
                 break;
