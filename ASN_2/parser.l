@@ -21,7 +21,7 @@ int setValue(int linenum, int tokenClass, char *svalue) {
     yylval.tokenData = new TokenData;
     //cout << "setvalue:  " << linenum << ", " << tokenClass << ", " << svalue << endl;
     yylval.tokenData->tokenclass = tokenClass;
-    yylval.tokenData->linenum;
+    yylval.tokenData->linenum = line;
     yylval.tokenData->tokenstr = lastToken = strdup(svalue);
     yylval.tokenData->cvalue = svalue[0];
     yylval.tokenData->nvalue = atoi(svalue); // check to see if should be ll
