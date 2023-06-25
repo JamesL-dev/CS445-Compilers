@@ -92,9 +92,9 @@ TreeNode *syntaxTree;
 %%
 program        :  precomList declList                             { syntaxTree = $2; }
                ;
-precomList     :  precomList PRECOMPILER                          { $$ = $1; }
-               |  PRECOMPILER                                     { printf("%s\n", yylval.tokenData->tokenstr); }
-               |  /*empty*/                                       { $$ = NULL; }
+precomList     : precomList PRECOMPILER                      { $$ = NULL; printf("%s\n", yylval.tokenData->tokenstr);}
+               | PRECOMPILER                                 { $$ = NULL; printf("%s\n", yylval.tokenData->tokenstr);}
+               | /* empty */                                 { $$ = NULL;}
                ;
 declList       :  declList decl                                   { $$ = addSibling($1, $2); }
                |  decl                                            { $$ = $1; }
