@@ -139,8 +139,12 @@ parmTypeList   :  typeSpec parmIdList                             { $$ = $2; set
 parmIdList     :  parmIdList ',' parmId                           { $$ = addSibling($1, $3); yyerrok; }
                |  parmId                                          { $$ = $1; }
                ;
-parmId         :  ID                                              { $$ = newDeclNode(ParamK, UndefinedType, $1); }
-               |  ID '[' ']'                                      { $$ = newDeclNode(ParamK, UndefinedType, $1); }
+parmId         :  ID                                              { $$ = newDeclNode(ParamK, UndefinedType, $1);
+                                                                    $$->isArray = false;
+                                                                    $$->size = 1; }
+               |  ID '[' ']'                                      { $$ = newDeclNode(ParamK, UndefinedType, $1); 
+                                                                    $$->isArray = true;
+                                                                    $$->size = 1; }
                ;
 stmt           :  matched                                         { $$ = $1; }
                |  unmatched                                       { $$ = $1; }
@@ -247,7 +251,8 @@ factor         :  immutable                                       { $$ = $1; }
                |  mutable                                         { $$ = $1; }
                ;
 mutable        :  ID                                              { $$ = newExpNode(IdK, $1);
-                                                                     $$->isArray = false; }
+                                                                     $$->isArray = false; 
+                                                                     $$->attr.name = $1->svalue;
                |  ID '[' exp ']'                                  { $$ = newExpNode(OpK, $2, NULL, $3);
                                                                      $$->child[0] = newExpNode(IdK, $1);
                                                                      $$->child[0]->attr.name = $1->svalue;
