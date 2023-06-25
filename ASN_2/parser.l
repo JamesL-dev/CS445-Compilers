@@ -29,7 +29,7 @@ int setValue(int linenum, int tokenClass, char *svalue) {
 
     switch (tokenClass) {
         case BOOLCONST:
-            yylval.tokenData->nvalue = ((lastToken[0]==tokenClass) ? 1 : 0);
+            yylval.tokenData->nvalue = ((lastToken[0]=='t') ? 1 : 0);
             break;
         case STRINGCONST:
             yylval.tokenData->nvalue = strlen(svalue);
