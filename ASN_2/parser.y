@@ -252,9 +252,9 @@ factor         :  immutable                                       { $$ = $1; }
                ;
 mutable        :  ID                                              { $$ = newExpNode(IdK, $1);
                                                                      $$->isArray = false; 
-                                                                     $$->attr.name = $1->svalue;
+                                                                     $$->attr.name = $1->svalue; }
                |  ID '[' exp ']'                                  { $$ = newExpNode(OpK, $2, NULL, $3);
-                                                                     $$->child[0] = newExpNode(IdK, $1);
+                                                                     $$->child[0] = newExpNode(IdK, $1); 
                                                                      $$->child[0]->attr.name = $1->svalue;
                                                                      $$->isArray = false; }
                ;
