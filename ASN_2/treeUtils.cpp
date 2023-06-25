@@ -2,112 +2,116 @@
 #include "treeUtils.h"
 #include "treeNodes.h"
 
-
 extern void yyerror(const char *msg);
 static int nodeNum = 0;
 
- FILE *listing;
+FILE *listing;
 
+TreeNode *newDeclNode(DeclKind kind, ExpType type, TokenData *token, TreeNode *c0, TreeNode *c1, TreeNode *c2)
+{
+   TreeNode *newNode;
+   int i;
 
-TreeNode *cloneNode(TreeNode *currnode){ return currnode;}
-TreeNode *newDeclNode(DeclKind kind, ExpType type, TokenData *token, TreeNode *c0, TreeNode *c1, TreeNode *c2) {
-  int i;
-  TreeNode *newNode;
-  newNode = new TreeNode;
-  newNode->nodeNum = nodeNum++; 
+   newNode = new TreeNode;
+   newNode->nodeNum = nodeNum++;
 
-  if (newNode == NULL) {
-    yyerror("is NULL");
-  } 
-  else {
-    newNode->child[0] = c0;
-    newNode->child[0] = c1;
-    newNode->child[0] = c2;
+   if (newNode == NULL) {
+      yyerror("ERROR: Out of memory");
+   }
+   else {
+      // set the defaults for a general node
+      newNode->child[0] = c0;
+      newNode->child[1] = c1;
+      newNode->child[2] = c2;
+      newNode->sibling = NULL;
+      newNode->lineno = (token ? token->linenum : -1);
+      newNode->attr.name = (token ? token->svalue : strdup("DUMMY"));    // NOTE: just copies pointer
+      newNode->type = type;
+// set default values for inferred parts
+      newNode->size = 1;
+      newNode->varKind = Local;
+      newNode->offset = 0;
+      newNode->isArray = false;
+      newNode->isStatic = false;
+      newNode->isConst = false;
 
-    newNode->sibling = NULL;
-    newNode->lineno = (token ? token->linenum: -1);
-    newNode->attr.name = (token ? token->svalue : strdup("DUMPSTRING"));
-    newNode->type = type;
-    newNode->size = 1;
-    newNode->varKind = Local;
-    newNode->offset = 0;
-    newNode->isArray = false;
-    newNode->isStatic = false;
-    newNode->isConst = false;
+      // set the defaults for this class of nodes
+      newNode->nodekind = DeclK;
+      newNode->kind.decl = kind;
+   }
+   return newNode;
+}
 
-    newNode->nodekind = DeclK;
-    newNode->kind.decl = kind;
+// basic statement node defaults
+TreeNode *newStmtNode(StmtKind kind, TokenData *token, TreeNode *c0, TreeNode *c1, TreeNode *c2)
+{
+   TreeNode *newNode;
+   int i;
 
-  }
+   newNode = new TreeNode;
+   newNode->nodeNum = nodeNum++;
 
-    return newNode;
-}  // save TokenData block!!
+   if (newNode == NULL) {
+   yyerror("ERROR: Out of memory");
+    }
+    else {
+      // set the defaults for a general node
+      newNode->child[0] = c0;
+      newNode->child[1] = c1;
+      newNode->child[2] = c2;
+      newNode->sibling = NULL;
+      newNode->lineno = token->linenum;
+// set default just to be sure (should not be needed except varKind)
+      newNode->varKind = None;
+      newNode->size = 1;
+      newNode->offset = 0;
+      newNode->isArray = false;
+      newNode->isStatic = false;
+      newNode->isConst = false;
 
-TreeNode *newStmtNode(StmtKind kind, TokenData *token, TreeNode *c0, TreeNode *c1, TreeNode *c2) {
-                        
-  int i;
-  TreeNode *newNode;
-  newNode = new TreeNode;
-  newNode->nodeNum = nodeNum++; 
+      // set the defaults for this class of nodes
+      newNode->nodekind = StmtK;
+      newNode->kind.stmt = kind;
+   }
+   return newNode;
+}
 
-  if (newNode == NULL) {
-    yyerror("is NULL");
-  } 
-  else {
-    newNode->child[0] = c0;
-    newNode->child[0] = c1;
-    newNode->child[0] = c2;
+// this node is concerned also with operator and expression type
+TreeNode *newExpNode(ExpKind kind, TokenData *token, TreeNode *c0, TreeNode *c1, TreeNode *c2)
+{
+   TreeNode *newNode;
+   int i;
 
-    newNode->sibling = NULL;
-    newNode->lineno = (token ? token->linenum: -1);
-    newNode->attr.name = (token ? token->svalue : strdup("DUMPSTRING"));
-    //newNode->type = type;
-    newNode->size = 1;
-    newNode->varKind = Local;
-    newNode->offset = 0;
-    newNode->isArray = false;
-    newNode->isStatic = false;
-    newNode->isConst = false;
+   newNode = new TreeNode;
+   newNode->nodeNum = nodeNum++;
 
-    newNode->nodekind = StmtK;
-    newNode->kind.stmt = kind;
+   if (newNode == NULL) {
+      yyerror("ERROR: Out of memory");
+   }
+   else {
+//////////////////
+//printf("%c %d\n", token->tokenclass, token->tokenclass);
+      // set the defaults for a general node
+      newNode->child[0] = c0;
+      newNode->child[1] = c1;
+      newNode->child[2] = c2;
+      newNode->sibling = NULL;
+      newNode->lineno = token->linenum;
+      newNode->attr.op = OpKind(token->tokenclass);
+      newNode->type = UndefinedType;
+// set default just to be sure
+      newNode->size = 1;
+      newNode->varKind = Local;
+      newNode->offset = 0;
+      newNode->isArray = false;
+      newNode->isStatic = false;
+      newNode->isConst = false;
 
-  }
-
-    return newNode;}
-
-TreeNode *newExpNode(ExpKind kind, TokenData *token, TreeNode *c0, TreeNode *c1, TreeNode *c2) {
-
-  int i;
-  TreeNode *newNode;
-  newNode = new TreeNode;
-  newNode->nodeNum = nodeNum++; 
-
-  if (newNode == NULL) {
-    yyerror("is NULL");
-  } 
-  else {
-    newNode->child[0] = c0;
-    newNode->child[0] = c1;
-    newNode->child[0] = c2;
-
-    newNode->sibling = NULL;
-    newNode->lineno = (token ? token->linenum: -1);
-    newNode->attr.name = (token ? token->svalue : strdup("DUMPSTRING"));
-    //newNode->type = type;
-    newNode->size = 1;
-    newNode->varKind = Local;
-    newNode->offset = 0;
-    newNode->isArray = false;
-    newNode->isStatic = false;
-    newNode->isConst = false;
-
-    newNode->nodekind = ExpK;
-    newNode->kind.exp = kind;
-
-  }
-
-    return newNode; 
+      // set the defaults for this class of nodes
+      newNode->nodekind = ExpK;
+      newNode->kind.exp = kind;
+   }
+   return newNode;
 }
 
  /* printSpaces indents by printing spaces */
