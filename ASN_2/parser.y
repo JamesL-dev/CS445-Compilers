@@ -150,7 +150,8 @@ matched        :  IF simpleExp THEN matched ELSE matched          { $$ = newStmt
                |  FOR ID '=' iterRange DO matched                 { $$ = newStmtNode(ForK, $1, NULL, $4, $6);
                                                                      $$->child[0] = newDeclNode(VarK, Integer, $2);
                                                                      $$->child[0]->attr.name = $2->svalue;
-                                                                     $$->child[0]->isArray = false; }
+                                                                     $$->child[0]->isArray = false; 
+                                                                     $$->chile[0]->size = 1; }
                |  expStmt                                         { $$ = $1; }
                |  compoundStmt                                    { $$ = $1; }
                |  returnStmt                                      { $$ = $1; }
@@ -169,6 +170,7 @@ unmatched      :  IF simpleExp THEN stmt                          { $$ = newStmt
                                                                      $$->child[0]->size = 1; }
                ;
 expStmt        :  exp ';'                                         { $$ = $1; }
+               | ';'                                              { $$ = NULL; }
                ;
 compoundStmt   :  '{' localDecls stmtList '}'                     { $$ = newStmtNode(CompoundK, $1, $2, $3); yyerrok; }
                ;
