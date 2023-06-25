@@ -382,7 +382,7 @@ int main(int argc, char **argv) {
       fclose (yyin);
    }
    if (numErrors==0) {
-      printTree(stdout, syntaxTree, true, true);
+      printTree(stdout, syntaxTree, false, false);
       if(dotAST) {
          printDotTree(stdout, syntaxTree, false, false);
       }
