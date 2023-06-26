@@ -366,6 +366,7 @@ int main(int argc, char **argv) {
    char *file = NULL;
    bool dotAST = false;             // make dot file of AST
    extern FILE *yyin;
+   initTokenStrings();
 
    int ch;
 
