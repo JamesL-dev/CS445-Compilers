@@ -210,7 +210,7 @@ unaryRelExp    :  NOT unaryRelExp                                 { $$ = newExpN
                                                                      $$->attr.op = NOT; }
                |  relExp                                          { $$ = $1; }
                ;
-relExp         :  minmaxExp relop minmaxExp                       { $$ = newExpNode(Opk, $2, $1, $3); }
+relExp         :  minmaxExp relop minmaxExp                       { $$ = newExpNode(OpK, $2, $1, $3); }
                |  minmaxExp                                       { $$ = $1; }
                ; 
 relop          :  LEQ                                             { $$ = $1;}
