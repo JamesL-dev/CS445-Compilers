@@ -34,7 +34,17 @@ int setValue(int linenum, int tokenClass, char *svalue) {
         case STRINGCONST:
             yylval.tokenData->nvalue = strlen(svalue);
             break;
-        // cases for STRINGCONST & CHARCONST
+        case CHARCONST: // This doesnt work for slash n and slash 0, need fix
+            yylval.tokenData->cvalue = svalue[1];
+            if (svalue[1] == '\\')
+            {
+              if (svalue[2] == 'n')
+                yylval.tokenData->cvalue = '\n';
+              if (svalue[2] == '0')
+                yylval.tokenData->cvalue = '\0';
+            }
+            
+            break;
     }
     
     return tokenClass;
