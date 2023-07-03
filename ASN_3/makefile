@@ -11,16 +11,23 @@ $(PARSE).y\
 $(PARSE).l\
 main.cpp\
 treeUtils.cpp\
+symbolTable.cpp
+semantics.cpp
+
 
 HDRS =\
 scanType.h\
 treeNodes.h\
 treeUtils.h\
+symbolTable.h\
+semantics.h\
 
 OBJS = \
 $(PARSE).tab.o\
 lex.yy.o\
 treeUtils.o\
+symbolTable.o\
+semantics.o\
 
 LIBS = -lm 
 
